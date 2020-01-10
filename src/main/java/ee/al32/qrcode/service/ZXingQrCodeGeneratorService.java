@@ -1,6 +1,8 @@
 package ee.al32.qrcode.service;
 
 
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import javax.enterprise.context.ApplicationScoped;
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -11,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.Optional;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -50,12 +53,12 @@ public class ZXingQrCodeGeneratorService implements QRCodeGenerator {
                 bufferedImage.getWidth() / 2 + logoImage.getWidth() / 2,
                 bufferedImage.getHeight() / 2 + logoImage.getHeight() / 2,
                 0, 0, logoImage.getWidth(), logoImage.getHeight(), null);
-        byte[] byteArrayOutputStream = getBytesFromImage(message, bufferedImage);
-        if (byteArrayOutputStream != null) return byteArrayOutputStream;
-        throw new RuntimeException("cannot generate qrcode");
+        return getBytesFromImage(message, bufferedImage)
+                .orElseThrow(() -> new RuntimeException("cannot generate qrcode"))
+                .toByteArray();
     }
 
-    private byte[] getBytesFromImage(String message, BufferedImage bufferedImage) {
+    private Optional<ByteArrayOutputStream> getBytesFromImage(String message, BufferedImage bufferedImage) {
         if (isCorrect(message, bufferedImage)) {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             try {
@@ -63,9 +66,9 @@ public class ZXingQrCodeGeneratorService implements QRCodeGenerator {
             } catch (IOException e) {
                 log.error("error getting bytes for image", e);
             }
-            return byteArrayOutputStream.toByteArray();
+            return of(byteArrayOutputStream);
         }
-        return null;
+        return empty();
     }
 
     private boolean isCorrect(String message, BufferedImage image) {
@@ -88,7 +91,6 @@ public class ZXingQrCodeGeneratorService implements QRCodeGenerator {
         }
     }
 
-
     private BufferedImage getScaledImage(BufferedImage image, Integer width, Integer height) {
         int imageWidth = image.getWidth();
         int imageHeight = image.getHeight();
@@ -100,7 +102,7 @@ public class ZXingQrCodeGeneratorService implements QRCodeGenerator {
     }
 
     private double calcRate(BufferedImage image, BufferedImage logo) {
-        if ((logo.getWidth() / image.getHeight()) > 0.3) {
+        if ((logo.getWidth() * 1.0 / image.getHeight()) > 0.3) {
             return 0.3;
         }
         return 1;
